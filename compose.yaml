@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: clean_connect
+      POSTGRES_PASSWORD: clean_connect
+      POSTGRES_DB: clean_connect
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clean_connect -d clean_connect"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres-data:

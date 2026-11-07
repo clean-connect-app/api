@@ -1,0 +1,45 @@
+{
+  "name": "clean-connect-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "dev": "npm run build && node --env-file-if-exists=.env --watch dist/server/main.js",
+    "start": "node --env-file-if-exists=.env dist/server/main.js",
+    "build": "tsc -p tsconfig.server.json",
+    "migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
+    "seed": "node --env-file-if-exists=.env scripts/seed.mjs",
+    "lint": "eslint . --max-warnings 0",
+    "format:check": "prettier . --check",
+    "typecheck": "tsc -p tsconfig.tests.json --noEmit",
+    "test": "tsc -p tsconfig.tests.json && node --test .test-build/tests/test_main.js .test-build/tests/orders.test.js",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
+    "@nestjs/platform-express": "12.3.2",
+    "openid-client": "6.8.9",
+    "pg": "8.23.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/express": "5.0.6",
+    "@types/node": "^24.0.0",
+    "@types/pg": "8.23.1",
+    "eslint": "10.14.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1"
+  },
+  "overrides": {
+    "minimatch": "11.0.4"
+  }
+}

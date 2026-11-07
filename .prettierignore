@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.test-build/
+.npm-cache/
+coverage/
+var/
+package-lock.json

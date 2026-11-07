@@ -1,0 +1,68 @@
+{
+  "version": "demo-2026-01",
+  "currency": "RUB",
+  "city": "Екатеринбург",
+  "demo": true,
+  "services": [
+    {
+      "id": "shirt",
+      "name": "Рубашка",
+      "description": "Чистота и аккуратный воротник",
+      "category": "Одежда",
+      "icon": "shirt",
+      "priceKopecks": 39000
+    },
+    {
+      "id": "trousers",
+      "name": "Брюки",
+      "description": "Бережный уход, идеальная форма",
+      "category": "Одежда",
+      "icon": "trousers",
+      "priceKopecks": 65000
+    },
+    {
+      "id": "dress",
+      "name": "Платье",
+      "description": "Деликатная чистка любимых вещей",
+      "category": "Одежда",
+      "icon": "dress",
+      "priceKopecks": 99000
+    },
+    {
+      "id": "suit",
+      "name": "Костюм",
+      "description": "Пиджак и брюки вместе",
+      "category": "Одежда",
+      "icon": "suit",
+      "priceKopecks": 149000
+    },
+    {
+      "id": "coat",
+      "name": "Пальто",
+      "description": "Свежесть к новому сезону",
+      "category": "Верхняя одежда",
+      "icon": "coat",
+      "priceKopecks": 179000
+    },
+    {
+      "id": "duvet",
+      "name": "Одеяло",
+      "description": "Для уютных и спокойных вечеров",
+      "category": "Домашний текстиль",
+      "icon": "duvet",
+      "priceKopecks": 159000
+    }
+  ],
+  "delivery": { "feeKopecks": 39900, "freeFromKopecks": 300000 },
+  "limits": { "maxQuantityPerService": 20, "maxItems": 100 },
+  "pickup": {
+    "timeZone": "Asia/Yekaterinburg",
+    "daysAhead": 14,
+    "slots": [
+      { "id": "morning", "label": "09:00–12:00" },
+      { "id": "afternoon", "label": "12:00–15:00" },
+      { "id": "evening", "label": "15:00–18:00" },
+      { "id": "late", "label": "18:00–21:00" }
+    ]
+  }
+}

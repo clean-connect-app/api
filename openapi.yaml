@@ -1,0 +1,340 @@
+openapi: 3.1.0
+info:
+  title: Clean Connect API
+  version: 0.1.0
+servers:
+  - url: /api
+paths:
+  /health:
+    get:
+      summary: Проверка подключения к базе и наличия схемы
+      responses:
+        "200": { description: API доступен }
+  /catalog:
+    get:
+      summary: Каталог, точки и календарь
+      responses:
+        "200":
+          description: Данные для оформления и редактирования
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [catalog, points, pickupDates, returnDates]
+                properties:
+                  catalog: { $ref: "#/components/schemas/Catalog" }
+                  points:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/Point" },
+                    }
+                  pickupDates:
+                    { type: array, items: { type: string, format: date } }
+                  returnDates:
+                    { type: array, items: { type: string, format: date } }
+  /quote:
+    post:
+      summary: Серверный расчёт стоимости корзины
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items: { $ref: "#/components/schemas/Basket" }
+      responses:
+        "200":
+          description: Расчёт в копейках
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quote" }
+        "400": { $ref: "#/components/responses/Error" }
+  /auth/session:
+    get:
+      summary: Состояние клиентской сессии
+      responses:
+        "200":
+          description: Статус сессии и настройки входа
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authenticated, loginAvailable]
+                properties:
+                  authenticated: { type: boolean }
+                  loginAvailable: { type: boolean }
+  /auth/login:
+    get:
+      summary: Начать вход у провайдера OpenID Connect
+      parameters:
+        - name: returnTo
+          in: query
+          schema: { type: string, pattern: '^/(?:orders(?:/\d+)?)?$' }
+      responses:
+        "302": { description: Переход на страницу входа }
+        "503": { $ref: "#/components/responses/Error" }
+  /auth/callback:
+    get:
+      summary: Возврат от провайдера OpenID Connect
+      responses:
+        "303": { description: Возврат в клиентское приложение }
+  /auth/logout:
+    post:
+      summary: Завершить текущую сессию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { description: Сессия завершена }
+  /orders:
+    post:
+      summary: Оформить заказ и забронировать оба интервала
+      security: [{ Session: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrderInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Order" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /me/orders:
+    get:
+      summary: Список заказов текущего клиента
+      security: [{ Session: [] }]
+      responses:
+        "200":
+          description: Заказы от новых к старым
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Order" }
+        "401": { $ref: "#/components/responses/Error" }
+  /me/orders/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    get:
+      summary: Карточка своего заказа
+      security: [{ Session: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/Order" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      summary: Заменить данные заказа до назначения курьера
+      security: [{ Session: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [order, version, expectedTotalKopecks]
+              properties:
+                order: { $ref: "#/components/schemas/OrderInput" }
+                version: { type: integer, minimum: 1 }
+                expectedTotalKopecks: { type: integer, minimum: 0 }
+      responses:
+        "200": { $ref: "#/components/responses/Order" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    Session:
+      type: apiKey
+      in: cookie
+      name: __Host-clean-connect-session
+      description: При локальном HTTP имя cookie clean-connect-session.
+  responses:
+    Order:
+      description: Данные своего заказа
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Order" }
+    Error:
+      description: Операция отклонена
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [statusCode, message]
+            properties:
+              statusCode: { type: integer }
+              message: { type: string }
+              field: { type: string }
+  schemas:
+    Basket:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        additionalProperties: false
+        required: [serviceId, quantity]
+        properties:
+          serviceId: { type: string }
+          quantity: { type: integer, minimum: 1 }
+    Slot:
+      type: object
+      required: [date, slotId]
+      properties:
+        date: { type: string, format: date }
+        slotId: { type: string }
+    BookedSlot:
+      allOf:
+        - $ref: "#/components/schemas/Slot"
+        - type: object
+          required: [slotLabel, timeZone]
+          properties:
+            slotLabel: { type: string }
+            timeZone: { type: string }
+    Point:
+      type: object
+      required: [id, name, phone, minimumReturnDays]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        minimumReturnDays: { type: integer }
+    OrderInput:
+      type: object
+      additionalProperties: false
+      required: [catalogVersion, pointId, items, customer, pickup, returnSlot]
+      properties:
+        catalogVersion: { type: string }
+        pointId: { type: string }
+        items: { $ref: "#/components/schemas/Basket" }
+        customer:
+          type: object
+          additionalProperties: false
+          required: [name, phone, address]
+          properties:
+            name: { type: string }
+            phone: { type: string }
+            address: { type: string }
+        pickup: { $ref: "#/components/schemas/Slot" }
+        returnSlot: { $ref: "#/components/schemas/Slot" }
+        note: { type: string }
+    Order:
+      type: object
+      required:
+        [
+          id,
+          number,
+          version,
+          status,
+          statusLabel,
+          createdAt,
+          quote,
+          pickup,
+          returnSlot,
+          point,
+          order,
+        ]
+      properties:
+        id: { type: integer }
+        number: { type: string }
+        version: { type: integer }
+        status: { enum: [new, assigned, collected, ready, delivered] }
+        statusLabel: { type: string }
+        createdAt: { type: string, format: date-time }
+        quote: { $ref: "#/components/schemas/Quote" }
+        pickup: { $ref: "#/components/schemas/BookedSlot" }
+        returnSlot: { $ref: "#/components/schemas/BookedSlot" }
+        point: { $ref: "#/components/schemas/Point" }
+        order: { $ref: "#/components/schemas/OrderInput" }
+    Quote:
+      type: object
+      required:
+        [
+          catalogVersion,
+          currency,
+          lines,
+          quantity,
+          subtotalKopecks,
+          deliveryKopecks,
+          totalKopecks,
+        ]
+      properties:
+        catalogVersion: { type: string }
+        currency: { const: RUB }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [serviceId, name, quantity, priceKopecks, amountKopecks]
+            properties:
+              serviceId: { type: string }
+              name: { type: string }
+              quantity: { type: integer }
+              priceKopecks: { type: integer }
+              amountKopecks: { type: integer }
+        quantity: { type: integer }
+        subtotalKopecks: { type: integer }
+        deliveryKopecks: { type: integer }
+        totalKopecks: { type: integer }
+    Catalog:
+      type: object
+      required:
+        [version, currency, city, demo, services, delivery, limits, pickup]
+      properties:
+        version: { type: string }
+        currency: { const: RUB }
+        city: { type: string }
+        demo: { type: boolean }
+        services:
+          type: array
+          items:
+            type: object
+            required: [id, name, description, category, icon, priceKopecks]
+            properties:
+              id: { type: string }
+              name: { type: string }
+              description: { type: string }
+              category: { type: string }
+              icon: { enum: [shirt, trousers, dress, suit, coat, duvet] }
+              priceKopecks: { type: integer }
+        delivery:
+          type: object
+          required: [feeKopecks, freeFromKopecks]
+          properties:
+            feeKopecks: { type: integer }
+            freeFromKopecks: { type: integer }
+        limits:
+          type: object
+          required: [maxQuantityPerService, maxItems]
+          properties:
+            maxQuantityPerService: { type: integer }
+            maxItems: { type: integer }
+        pickup:
+          type: object
+          required: [timeZone, daysAhead, slots]
+          properties:
+            timeZone: { type: string }
+            daysAhead: { type: integer }
+            slots:
+              type: array
+              items:
+                type: object
+                required: [id, label]
+                properties:
+                  id: { type: string }
+                  label: { type: string }
